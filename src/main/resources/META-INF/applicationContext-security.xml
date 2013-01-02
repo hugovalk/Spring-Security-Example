@@ -74,9 +74,7 @@
         This is the part where the IDMS will be queried. A custom IDMSUserDetails object will be returned,
         containing the Spring Security part and the IDMS account information.
     -->
-    <beans:bean id="customTokenUserDetailsService" class="nl.rsg.mobile.security.CustomTokenUserDetailsService">
-        <beans:property name="accountDataService" ref="accountDataService" />
-    </beans:bean>
+<!--     <beans:bean id="customTokenUserDetailsService" class="com.devdiscoveries.security.CustomTokenUserDetailsService"/>-->
     
     <!--
         This filter will do authentication/authorization based on the assumption that the user is preauthenticated by another
@@ -85,8 +83,8 @@
         The filter will verify the token and load the user details from the IDMS system, containing all the roles and
         other account information. To do this, it will use the authecticationManager.
     -->
-    <beans:bean id="customPreAuthenticatedProcessingFilter" class="nl.rsg.mobile.security.filter.CustomTokenPreAuthenticatedProcessingFilter">
+<!--     <beans:bean id="customPreAuthenticatedProcessingFilter" class="nl.rsg.mobile.security.filter.CustomTokenPreAuthenticatedProcessingFilter">
         <beans:property name="authenticationManager" ref="authenticationManager" />
-    </beans:bean>
+    </beans:bean>-->
 
 </beans:beans>
