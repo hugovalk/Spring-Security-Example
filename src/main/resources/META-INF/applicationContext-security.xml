@@ -23,8 +23,12 @@
 
         Expressions are used to set the access rules, see: http://static.springsource.org/spring-security/site/docs/3.1.x/reference/el-access.html
     -->
-    <http auto-config="false" entry-point-ref="http403EntryPoint" use-expressions="true" create-session="stateless">
-        <custom-filter position="PRE_AUTH_FILTER" ref="idmsPreAuthenticatedProcessingFilter" />
+    <http auto-config="false" use-expressions="true" create-session="stateless" entry-point-ref="http403EntryPoint">
+        <custom-filter position="PRE_AUTH_FILTER" ref="customPreAuthenticatedProcessingFilter" />
+        <intercept-url pattern="/protected/**" requires-channel="https"/>
+    	<intercept-url pattern="/**" access="isAnonymous()" />
+    </http>
+<!--     <http auto-config="false" entry-point-ref="http403EntryPoint" use-expressions="true" create-session="stateless">
         <intercept-url pattern="/**/jobSearchService" access="isAnonymous()" />
         <intercept-url pattern="/**/jobDetailsService" access="isAnonymous()" />
         <intercept-url pattern="/**/createToken" access="isAnonymous()" requires-channel="https" />
@@ -33,18 +37,7 @@
         <intercept-url pattern="/**/approveSchedule" access="isAuthenticated()" requires-channel="https" />
         <intercept-url pattern="/**/development*" access="isAnonymous()" />
         <intercept-url pattern="/**" access="isAnonymous()" />
-    </http>
-
-    <!--
-        This filter will do authentication/authorization based on the assumption that the user is preauthenticated by another
-        system. In our case, this is done via the token that has been requested earlier.
-
-        The filter will verify the token and load the user details from the IDMS system, containing all the roles and
-        other account information. To do this, it will use the authecticationManager.
-    -->
-    <beans:bean id="idmsPreAuthenticatedProcessingFilter" class="nl.rsg.mobile.security.filter.IdmsTokenPreAuthenticatedProcessingFilter">
-        <beans:property name="authenticationManager" ref="authenticationManager" />
-    </beans:bean>
+    </http>-->
 
     <!--
         Handles the security exceptions. If there is any Spring security exception, there should be a 403 Forbidden returnded.
@@ -73,7 +66,7 @@
         fetch the data via an UserDetailsService.
     -->
     <beans:bean id="preAuthenticatedProvider" class="org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider">
-        <beans:property name="preAuthenticatedUserDetailsService" ref="idmsTokenUserDetailsService" />
+        <beans:property name="preAuthenticatedUserDetailsService" ref="customTokenUserDetailsService" />
     </beans:bean>
 
     <!--
@@ -81,15 +74,19 @@
         This is the part where the IDMS will be queried. A custom IDMSUserDetails object will be returned,
         containing the Spring Security part and the IDMS account information.
     -->
-    <beans:bean id="idmsTokenUserDetailsService" class="nl.rsg.mobile.security.IdmsTokenUserDetailsService">
+    <beans:bean id="customTokenUserDetailsService" class="nl.rsg.mobile.security.CustomTokenUserDetailsService">
         <beans:property name="accountDataService" ref="accountDataService" />
     </beans:bean>
-
+    
     <!--
-        This bean post processor will inject custom channel (http/https) processors in the Spring Security framework.
-        These custom processors handle the x-rsg-secure header and send a 403 forbidden when the wrong channel has
-        been used.
+        This filter will do authentication/authorization based on the assumption that the user is preauthenticated by another
+        system. In our case, this is done via the token that has been requested earlier.
+
+        The filter will verify the token and load the user details from the IDMS system, containing all the roles and
+        other account information. To do this, it will use the authecticationManager.
     -->
-    <beans:bean class="nl.rsg.mobile.security.filter.ChannelSwitchingBeanPostProcessor" />
+    <beans:bean id="customPreAuthenticatedProcessingFilter" class="nl.rsg.mobile.security.filter.CustomTokenPreAuthenticatedProcessingFilter">
+        <beans:property name="authenticationManager" ref="authenticationManager" />
+    </beans:bean>
 
 </beans:beans>
