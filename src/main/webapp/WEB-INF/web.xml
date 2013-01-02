@@ -7,7 +7,6 @@
 		<param-name>contextConfigLocation</param-name>
 		<param-value>
             classpath:/META-INF/applicationContext-web.xml
-            classpath:/META-INF/applicationContext-security.xml
         </param-value>
 	</context-param>
 	<session-config>
@@ -21,10 +20,7 @@
 			<param-name>com.sun.jersey.config.property.packages</param-name>
 			<param-value>com.devdiscoveries.view</param-value>
 		</init-param>
-		<init-param>
-			<param-name>com.sun.jersey.api.json.POJOMappingFeature</param-name>
-			<param-value>true</param-value>
-		</init-param>
+		<load-on-startup>1</load-on-startup>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>jersey</servlet-name>
@@ -36,12 +32,12 @@
 	<listener>
 		<listener-class>org.springframework.web.context.request.RequestContextListener</listener-class>
 	</listener>
-	<filter>
+<!-- 	<filter>
 		<filter-name>springSecurityFilterChain</filter-name>
 		<filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
 	</filter>
 	<filter-mapping>
 		<filter-name>springSecurityFilterChain</filter-name>
 		<url-pattern>/*</url-pattern>
-	</filter-mapping>
+	</filter-mapping>-->
 </web-app>

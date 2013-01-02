@@ -1,1 +1,95 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans:beans xmlns="http://www.springframework.org/schema/security"
+    xmlns:beans="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+                    http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+                    http://www.springframework.org/schema/security
+                    http://www.springframework.org/schema/security/spring-security-3.1.xsd">
+
+    <!--
+        Configures the security options for the application.
+        The url patterns are listed from most specific to least specific and will be evaluated that way.
+        By default all urls are denied. More specific rules allow certain urlpatterns to be accessed with certain roles.
+
+        Public urls are forbidden to authenticated users, to make sure that the tokens are not transferred over http.
+        Roles have the format ROLE_..., which is the Spring Security format. These roles are constructed in the IDMSUserDetails
+        class as follows ROLE_[IDMS_ROLE], e.g. ROLE_EMPLOYEE, ROLE_TIJDSCHRIJVEN, etc.
+
+        The PRE_AUTH_FILTER will do the authentication, assuming the user has been authenticated by another system. See
+        the documentation on the idmsPreAuthenticatedProcessingFilter for more information.
+
+        The entry-point-ref is set to return a 403 Forbidden if the user is not allowed to view the resource.
+
+        Expressions are used to set the access rules, see: http://static.springsource.org/spring-security/site/docs/3.1.x/reference/el-access.html
+    -->
+    <http auto-config="false" entry-point-ref="http403EntryPoint" use-expressions="true" create-session="stateless">
+        <custom-filter position="PRE_AUTH_FILTER" ref="idmsPreAuthenticatedProcessingFilter" />
+        <intercept-url pattern="/**/jobSearchService" access="isAnonymous()" />
+        <intercept-url pattern="/**/jobDetailsService" access="isAnonymous()" />
+        <intercept-url pattern="/**/createToken" access="isAnonymous()" requires-channel="https" />
+        <intercept-url pattern="/**/deleteToken" access="isAuthenticated()" requires-channel="https" />
+        <intercept-url pattern="/**/getSchedule" access="isAuthenticated()" requires-channel="https" />
+        <intercept-url pattern="/**/approveSchedule" access="isAuthenticated()" requires-channel="https" />
+        <intercept-url pattern="/**/development*" access="isAnonymous()" />
+        <intercept-url pattern="/**" access="isAnonymous()" />
+    </http>
+
+    <!--
+        This filter will do authentication/authorization based on the assumption that the user is preauthenticated by another
+        system. In our case, this is done via the token that has been requested earlier.
+
+        The filter will verify the token and load the user details from the IDMS system, containing all the roles and
+        other account information. To do this, it will use the authecticationManager.
+    -->
+    <beans:bean id="idmsPreAuthenticatedProcessingFilter" class="nl.rsg.mobile.security.filter.IdmsTokenPreAuthenticatedProcessingFilter">
+        <beans:property name="authenticationManager" ref="authenticationManager" />
+    </beans:bean>
+
+    <!--
+        Handles the security exceptions. If there is any Spring security exception, there should be a 403 Forbidden returnded.
+    -->
+    <beans:bean id="exceptionTranslationFilter" class="org.springframework.security.web.access.ExceptionTranslationFilter">
+        <beans:property name="authenticationEntryPoint" ref="http403EntryPoint"/>
+    </beans:bean>
+
+    <!--
+        This is the entry point in the application when authentication fails. In our case we will just show a
+        403 Forbidden.
+    -->
+    <beans:bean id="http403EntryPoint" class="org.springframework.security.web.authentication.Http403ForbiddenEntryPoint" />
+
+    <!--
+        The authenticationManager takes care of the authentication and role checking. To do this, it uses an authentication
+        provider, to provide it with the necessary data.
+    -->
+    <authentication-manager alias="authenticationManager">
+        <authentication-provider ref="preAuthenticatedProvider" />
+    </authentication-manager>
+
+    <!--
+        The authentication provider provides authentication information. In this case it assumes that the user is
+        pre-authenticated. To get the account information, it uses an Authentication object from the PreAuthenticatedProcessingFilter to
+        fetch the data via an UserDetailsService.
+    -->
+    <beans:bean id="preAuthenticatedProvider" class="org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationProvider">
+        <beans:property name="preAuthenticatedUserDetailsService" ref="idmsTokenUserDetailsService" />
+    </beans:bean>
+
+    <!--
+        The user details service will provide account information based on the Authentication object.
+        This is the part where the IDMS will be queried. A custom IDMSUserDetails object will be returned,
+        containing the Spring Security part and the IDMS account information.
+    -->
+    <beans:bean id="idmsTokenUserDetailsService" class="nl.rsg.mobile.security.IdmsTokenUserDetailsService">
+        <beans:property name="accountDataService" ref="accountDataService" />
+    </beans:bean>
+
+    <!--
+        This bean post processor will inject custom channel (http/https) processors in the Spring Security framework.
+        These custom processors handle the x-rsg-secure header and send a 403 forbidden when the wrong channel has
+        been used.
+    -->
+    <beans:bean class="nl.rsg.mobile.security.filter.ChannelSwitchingBeanPostProcessor" />
+
+</beans:beans>
